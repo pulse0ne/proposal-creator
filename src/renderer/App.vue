@@ -1,12 +1,56 @@
 <template>
   <div id="app">
     <div class="controls" v-if="!hideControls">
+        <div class="inputs">
+            <div class="input-group">
+                <span>My name:</span>
+                <input type="text" v-model="myName">
+            </div>
+            <div class="input-group">
+                <span>My email:</span>
+                <input type="email" v-model="myEmail">
+            </div>
+            <div class="input-group">
+                <span>My phone:</span>
+                <input type="tel" v-model="myPhone">
+            </div>
+            <div class="input-group">
+                <span>Client name:</span>
+                <input type="text" v-model="clientName">
+            </div>
+            <div class="input-group">
+                <span>Project ID:</span>
+                <input type="text" v-model="projectId">
+            </div>
+            <div class="input-group">
+                <span>Project Name:</span>
+                <input type="text" v-model="projectName">
+            </div>
+            <div class="input-group">
+                <span>Test Input: </span>
+                <textarea v-model="testmodel"></textarea>
+            </div>
+        </div>
         <button @click="print()">Create PDF</button>
-        <textarea v-model="testmodel"></textarea>
     </div>
     <div class="content" :style="contentStyle">
         <h1 id="header">PROPOSAL</h1>
-        <p>{{ testmodel }}</p>
+        <div v-html="testmodel"></div>
+        <div class="project-info">
+            <div>
+                <strong>Developer: </strong>
+                <span v-html="myName"></span>
+                <span v-if="myEmail || myPhone" v-html="emailPhoneHtml"></span>
+            </div>
+            <div v-if="clientName">
+                <strong>Client: </strong>
+                <span v-html="clientName"></span>
+            </div>
+            <div v-if="projectId">
+                <strong>Project ID: </strong>
+                <span v-html="projectId"></span>
+            </div>
+        </div>
     </div>
   </div>
 </template>
@@ -17,7 +61,16 @@ import { ipcRenderer } from 'electron';
 export default {
     name: 'proposal-creator',
     data () {
-        return { hideControls: false, testmodel: '' };
+        return {
+            hideControls: false,
+            testmodel: '',
+            myName: '',
+            myEmail: '',
+            myPhone: '',
+            clientName: '',
+            projectName: '',
+            projectId: ''
+        };
     },
     mounted: function () {
         ipcRenderer.on('wrote-pdf', (event, path) => {
@@ -35,12 +88,39 @@ export default {
             if (!this.hideControls) {
                 return { border: '1px solid rgba(0, 0, 0, 0.3)' };
             }
+        },
+        phoneLink () {
+            if (this.myPhone) {
+                return 'tel:' + this.myPhone.replace(/[^\d]/g, '');
+            }
+        },
+        emailLink () {
+            if (this.myEmail) {
+                return 'mailto:' + this.myEmail;
+            }
+        },
+        emailPhoneHtml () {
+            let html = '&nbsp;(';
+            if (this.myEmail) {
+                html += `<span>Email: <a href="${this.emailLink}">${this.myEmail}</a></span>`;
+            }
+            if (this.myPhone) {
+                if (this.myEmail) {
+                    html += ';&nbsp;';
+                }
+                html += `<span>Phone: <a href="${this.phoneLink}">${this.myPhone}</a></span>`;
+            }
+            html += ')';
+            return html;
         }
     }
 };
 </script>
 
 <style>
+@import url('https://fonts.googleapis.com/css?family=Montserrat:900i|Source+Sans+Pro');
+
+/** TODO: remove the packaged font **/
 @font-face {
     font-family: 'Poppins';
     font-style: normal;
@@ -50,17 +130,66 @@ export default {
 }
 
 * {
-    font-family: sans-serif;
+    font-family: 'Source Sans Pro', sans-serif;
 }
 
 #header {
-    font-family: 'Poppins', sans-serif;
+    font-family: 'Montserrat', sans-serif;
     font-size: 72px;
     letter-spacing: -4px;
     margin: -16px 0;
+    color: #121212;
 }
 
 .content {
     padding: 18px;
+}
+
+.controls {
+    font-size: 10px;
+}
+
+.inputs {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    margin: 8px;
+}
+
+.input-group > span {
+    margin-right: 4px;
+}
+
+textarea, input {
+    font-size: inherit;
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    padding: 2px;
+}
+
+textarea:focus, input:focus {
+    box-shadow: 0 0 0 1px #05a86a;
+    outline: none;
+}
+
+button {
+    border: none;
+    background: #05a86a;
+    color: white;
+    border-radius: 12px;
+    font-size: inherit;
+    padding: 6px 12px;
+    cursor: pointer;
+}
+
+a {
+    color: #072a74;
 }
 </style>
