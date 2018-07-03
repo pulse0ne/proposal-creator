@@ -34,14 +34,15 @@
         <button @click="print()">Create PDF</button>
     </div>
     <div class="content" :style="contentStyle">
-        <h1 id="header">PROPOSAL</h1>
-        <div v-html="testmodel"></div>
-        <div class="project-info">
-            <div>
-                <strong>Developer: </strong>
-                <span v-html="myName"></span>
-                <span v-if="myEmail || myPhone" v-html="emailPhoneHtml"></span>
+        <div class="header-line">
+            <h1 id="header">PROPOSAL</h1>
+            <div class="header-info">
+                <div>{{ myName }}</div>
+                <div><a :href="emailLink">{{ myEmail }}</a></div>
+                <div><a :href="phoneLink">{{ myPhone }}</a></div>
             </div>
+        </div>
+        <div class="project-info">
             <div v-if="clientName">
                 <strong>Client: </strong>
                 <span v-html="clientName"></span>
@@ -50,6 +51,9 @@
                 <strong>Project ID: </strong>
                 <span v-html="projectId"></span>
             </div>
+        </div>
+        <div class="project-title">
+            {{ projectName }}
         </div>
     </div>
   </div>
@@ -98,20 +102,6 @@ export default {
             if (this.myEmail) {
                 return 'mailto:' + this.myEmail;
             }
-        },
-        emailPhoneHtml () {
-            let html = '&nbsp;(';
-            if (this.myEmail) {
-                html += `<span>Email: <a href="${this.emailLink}">${this.myEmail}</a></span>`;
-            }
-            if (this.myPhone) {
-                if (this.myEmail) {
-                    html += ';&nbsp;';
-                }
-                html += `<span>Phone: <a href="${this.phoneLink}">${this.myPhone}</a></span>`;
-            }
-            html += ')';
-            return html;
         }
     }
 };
@@ -133,9 +123,26 @@ export default {
     font-family: 'Source Sans Pro', sans-serif;
 }
 
+.header-line {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-info {
+    text-align: right;
+}
+
+.project-title {
+    text-align: center;
+    font-size: 24px;
+    margin: 20px;
+}
+
 #header {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 72px;
+    font-family: 'Montserrat', 'Poppins', sans-serif;
+    font-size: 92px;
     letter-spacing: -4px;
     margin: -16px 0;
     color: #121212;
