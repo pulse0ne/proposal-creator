@@ -1,16 +1,17 @@
 'use strict';
 
-import { app, BrowserWindow, ipcMain as ipc, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain as ipc, shell } from 'electron';
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
+
+let lastPath;
 
 /**
  * Set `__static` path to static files in production
  * https://simulatedgreg.gitbooks.io/electron-vue/content/en/using-static-assets.html
  */
 if (process.env.NODE_ENV !== 'development') {
-    global.__static = require('path').join(__dirname, '/static').replace(/\\/g, '\\\\');
+    global.__static = path.join(__dirname, '/static').replace(/\\/g, '\\\\');
 }
 
 let mainWindow;
@@ -49,16 +50,60 @@ app.on('activate', () => {
     }
 });
 
-ipc.on('print-to-pdf', event => {
-    const pdfPath = path.join(os.tmpdir(), 'test.pdf');
+ipc.on('save-to-pdf', event => {
     const win = BrowserWindow.fromWebContents(event.sender);
-    win.webContents.printToPDF({ pageSize: 'Letter', marginsType: 2 }, (error, data) => {
-        if (error) return console.error(error.message);
-
-        fs.writeFile(pdfPath, data, err => {
-            if (err) return console.error(err.message);
-            shell.openExternal('file://' + pdfPath);
-            event.sender.send('wrote-pdf', pdfPath);
-        });
+    const pdfPath = dialog.showSaveDialog({
+        title: 'Save Proposal PDF',
+        defaultPath: lastPath ? lastPath.replace(/\.html$/, '.pdf') : path.join(app.getPath('home'), 'proposal.pdf'),
+        filters: [{ name: 'PDF (*.pdf)', extensions: ['pdf'] }]
     });
+    if (pdfPath) {
+        lastPath = pdfPath;
+        win.webContents.printToPDF({ pageSize: 'Letter', marginsType: 2 }, (err, data) => {
+            if (err) {
+                event.sender.send('error', err.message);
+                return;
+            }
+
+            fs.writeFile(pdfPath, data, err => {
+                if (err) {
+                    console.error(err.message);
+                    event.sender.send('error', err.message);
+                } else {
+                    shell.openExternal('file://' + pdfPath);
+                    event.sender.send('wrote-pdf');
+                }
+            });
+        });
+    } else {
+        event.sender.send('wrote-pdf');
+    }
+});
+
+ipc.on('save-to-html', (event, page) => {
+    const htmlPath = dialog.showSaveDialog({
+        title: 'Save Proposal HTML',
+        defaultPath: lastPath ? lastPath.replace(/\.pdf$/, '.html') : path.join(app.getPath('home'), 'proposal.html'),
+        filters: [{ name: 'HTML (*.html)', extensions: ['html'] }]
+    });
+    if (htmlPath) {
+        lastPath = htmlPath;
+        let head = page.head.replace(/<script.*?>.*?<\/script>/g, '').replace(/\/\*.*?source.*?URL=.+?\*\//g, '');
+        let body = page.body.replace(/<script.*?>.*?<\/script>/g, '').replace(/\/\*.*?source.*?URL=.+?\*\//g, '');
+        let html = `<!DOCTYPE html><html><head>${head}</head><body>${body}</body></html>`;
+        fs.writeFile(htmlPath, html, err => {
+            if (err) {
+                console.error(err.message);
+                event.sender.send('error', err.message);
+            } else {
+                event.sender.send('wrote-html');
+            }
+        });
+    } else {
+        event.sender.send('wrote-html');
+    }
+});
+
+ipc.on('update-autocompletes', (event, autocompletes) => {
+    console.log(autocompletes);
 });

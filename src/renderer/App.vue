@@ -4,15 +4,15 @@
         <div class="inputs">
             <div class="input-group">
                 <span>My name:</span>
-                <input type="text" v-model="myName">
+                <autocomplete-input :options="devNameOptions" v-model="devName" />
             </div>
             <div class="input-group">
                 <span>My email:</span>
-                <input type="email" v-model="myEmail">
+                <autocomplete-input :options="devEmailOptions" v-model="devEmail" />
             </div>
             <div class="input-group">
                 <span>My phone:</span>
-                <input type="tel" v-model="myPhone">
+                <autocomplete-input :options="devPhoneOptions" v-model="devPhone" />
             </div>
             <div class="input-group">
                 <span>Client name:</span>
@@ -26,20 +26,17 @@
                 <span>Project Name:</span>
                 <input type="text" v-model="projectName">
             </div>
-            <div class="input-group">
-                <span>Test Input: </span>
-                <textarea v-model="testmodel"></textarea>
-            </div>
         </div>
-        <button @click="print()">Create PDF</button>
+        <button @click="saveToPdf()">Create PDF</button>
+        <button @click="saveToHtml()">Save HTML</button>
     </div>
-    <div class="content" :style="contentStyle">
+    <div class="content" :style="contentStyle" ref="content">
         <div class="header-line">
             <h1 id="header">PROPOSAL</h1>
             <div class="header-info">
-                <div>{{ myName }}</div>
-                <div><a :href="emailLink">{{ myEmail }}</a></div>
-                <div><a :href="phoneLink">{{ myPhone }}</a></div>
+                <div>{{ devName }}</div>
+                <div><a :href="emailLink">{{ devEmail }}</a></div>
+                <div><a :href="phoneLink">{{ devPhone }}</a></div>
             </div>
         </div>
         <div class="project-info">
@@ -60,31 +57,63 @@
 </template>
 
 <script>
-import { ipcRenderer } from 'electron';
+import { ipcRenderer as ipc } from 'electron';
+import AutocompleteInput from './components/AutocompleteInput.vue';
 
 export default {
     name: 'proposal-creator',
+    components: { AutocompleteInput },
     data () {
         return {
+            devNameOptions: [],
+            devPhoneOptions: [],
+            devEmailOptions: [],
             hideControls: false,
-            testmodel: '',
-            myName: '',
-            myEmail: '',
-            myPhone: '',
+            devName: '',
+            devEmail: '',
+            devPhone: '',
             clientName: '',
             projectName: '',
             projectId: ''
         };
     },
     mounted: function () {
-        ipcRenderer.on('wrote-pdf', (event, path) => {
+        ipc.on('wrote-pdf', () => {
             this.hideControls = false;
+        });
+
+        ipc.on('wrote-html', () => {
+            this.hideControls = false;
+        });
+
+        ipc.on('error', (event, msg) => {
+            this.hideControls = false;
+            // TODO: show toast
+            console.error(msg);
         });
     },
     methods: {
-        print () {
+        saveToPdf () {
             this.hideControls = true;
-            ipcRenderer.send('print-to-pdf');
+            this.updateAutocompletes();
+            this.$nextTick(() => ipc.send('save-to-pdf'));
+        },
+        saveToHtml () {
+            this.hideControls = true;
+            this.updateAutocompletes();
+            this.$nextTick(() => ipc.send('save-to-html', { head: document.head.innerHTML, body: document.body.innerHTML }));
+        },
+        updateAutocompletes () {
+            if (!this.devNameOptions.includes(this.devName)) {
+                this.devNameOptions.push(this.devName);
+            }
+            console.log(typeof this.devName, this.devName);
+            const autocompletes = {
+                devName: this.devName,
+                devEmail: this.devEmail,
+                devPhone: this.devPhone
+            };
+            ipc.send('update-autocompletes', autocompletes);
         }
     },
     computed: {
@@ -94,13 +123,13 @@ export default {
             }
         },
         phoneLink () {
-            if (this.myPhone) {
-                return 'tel:' + this.myPhone.replace(/[^\d]/g, '');
+            if (this.devPhone) {
+                return 'tel:' + this.devPhone.replace(/[^\d]/g, '');
             }
         },
         emailLink () {
-            if (this.myEmail) {
-                return 'mailto:' + this.myEmail;
+            if (this.devEmail) {
+                return 'mailto:' + this.devEmail;
             }
         }
     }
@@ -108,16 +137,7 @@ export default {
 </script>
 
 <style>
-@import url('https://fonts.googleapis.com/css?family=Montserrat:900i|Source+Sans+Pro');
-
-/** TODO: remove the packaged font **/
-@font-face {
-    font-family: 'Poppins';
-    font-style: normal;
-    font-weight: 900;
-    src: local('Poppins Black'), local('Poppins-Black'), url(./assets/Poppins.woff2) format('woff2');
-    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
+@import url('https://fonts.googleapis.com/css?family=Montserrat:700,900i|Source+Sans+Pro');
 
 * {
     font-family: 'Source Sans Pro', sans-serif;
@@ -135,13 +155,16 @@ export default {
 }
 
 .project-title {
+    font-family: 'Montserrat', 'Source Sans Pro', sans-serif;
     text-align: center;
     font-size: 24px;
+    font-weight: bold;
     margin: 20px;
 }
 
 #header {
-    font-family: 'Montserrat', 'Poppins', sans-serif;
+    font-family: 'Montserrat', sans-serif;
+    font-style: italic;
     font-size: 92px;
     letter-spacing: -4px;
     margin: -16px 0;
@@ -154,6 +177,7 @@ export default {
 
 .controls {
     font-size: 10px;
+    padding: 18px;
 }
 
 .inputs {
@@ -194,6 +218,7 @@ button {
     font-size: inherit;
     padding: 6px 12px;
     cursor: pointer;
+    margin: 4px;
 }
 
 a {

