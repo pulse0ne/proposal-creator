@@ -1,6 +1,6 @@
 <template>
   <div id="app">
-    <div class="controls" v-if="!hideControls">
+    <div class="controls" v-show="!hideControls">
         <div class="inputs">
             <div class="input-group">
                 <span>My name:</span>
@@ -91,28 +91,37 @@ export default {
             // TODO: show toast
             console.error(msg);
         });
+
+        ipc.on('autocompletes', (event, ac) => {
+            Object.keys(ac).forEach(k => this[k + 'Options'] = ac[k]);
+        });
+
+        ipc.send('get-autocompletes');
     },
     methods: {
         saveToPdf () {
-            this.hideControls = true;
             this.updateAutocompletes();
+            this.hideControls = true;
             this.$nextTick(() => ipc.send('save-to-pdf'));
         },
         saveToHtml () {
-            this.hideControls = true;
             this.updateAutocompletes();
+            this.hideControls = true;
             this.$nextTick(() => ipc.send('save-to-html', { head: document.head.innerHTML, body: document.body.innerHTML }));
         },
         updateAutocompletes () {
-            if (!this.devNameOptions.includes(this.devName)) {
-                this.devNameOptions.push(this.devName);
-            }
-            console.log(typeof this.devName, this.devName);
             const autocompletes = {
                 devName: this.devName,
                 devEmail: this.devEmail,
                 devPhone: this.devPhone
             };
+            Object.keys(autocompletes).forEach(a => {
+                const options = this[a + 'Options'];
+                const val = autocompletes[a];
+                if (!options.includes(val)) {
+                    options.push(val);
+                }
+            });
             ipc.send('update-autocompletes', autocompletes);
         }
     },
@@ -203,10 +212,11 @@ textarea, input {
     border: 1px solid rgba(0, 0, 0, 0.3);
     border-radius: 4px;
     padding: 2px;
+    box-sizing: border-box;
 }
 
 textarea:focus, input:focus {
-    box-shadow: 0 0 0 1px #05a86a;
+    border: 1px solid #05a86a;
     outline: none;
 }
 

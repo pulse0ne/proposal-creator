@@ -25,6 +25,7 @@ module.exports = {
 
     // others
     'semi': ['error', 'always'],
-    'indent': ['error', 4]
+    'indent': ['error', 4],
+    'no-return-assign': 0
   }
 }

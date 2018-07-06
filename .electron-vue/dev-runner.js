@@ -114,8 +114,13 @@ function startMain () {
 }
 
 function startElectron () {
-    let p = 'qspyz/fyu/sbz/dpn;91';
-    electronProcess = spawn(electron, ['--proxy-server=' + p.split('').map(a => String.fromCharCode(a.charCodeAt() - 1)).join(''), '--proxy-bypass-list=<local>', '--inspect=5858', '.']);
+    let proxy = process.env.HTTP_PROXY || process.env.http_proxy;
+    let sproxy = process.env.HTTPS_PROXY || process.env.https_proxy;
+    let p = '--proxy-server=';
+    if (proxy) p += `http=${proxy}${sproxy ? ';https=' + sproxy : ''}`;
+    else if (sproxy) p += `https=${sproxy}`;
+    let flags = (proxy || sproxy) ? [p, '--proxy-bypass-list=<local>', '--inspect=5858', '.'] : ['--inspect=5858', '.'];
+    electronProcess = spawn(electron, flags);
 
     electronProcess.stdout.on('data', data => {
         electronLog(data, 'blue');

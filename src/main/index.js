@@ -5,6 +5,28 @@ const fs = require('fs');
 const path = require('path');
 
 let lastPath;
+let acFile = path.join(app.getPath('userData'), 'ac.json');
+let autocompletes = {
+    devName: [],
+    devEmail: [],
+    devPhone: []
+};
+
+try {
+    try {
+        fs.accessSync(app.getPath('userData'));
+    } catch (_e) {
+        fs.mkdirSync(app.getPath('userData'));
+    }
+    try {
+        fs.accessSync(acFile, fs.constants.R_OK | fs.constants.W_OK);
+        autocompletes = JSON.parse(fs.readFileSync(acFile));
+    } catch (_e) {
+        fs.writeFileSync(acFile, JSON.stringify(autocompletes), 'utf8');
+    }
+} catch (e) {
+    console.error('Failed to load autocompletes', e);
+}
 
 /**
  * Set `__static` path to static files in production
@@ -104,6 +126,19 @@ ipc.on('save-to-html', (event, page) => {
     }
 });
 
-ipc.on('update-autocompletes', (event, autocompletes) => {
-    console.log(autocompletes);
+ipc.on('update-autocompletes', (event, ac) => {
+    Object.keys(autocompletes).forEach(a => {
+        if (!autocompletes[a].includes(ac[a])) {
+            autocompletes[a].push(ac[a]);
+        }
+    });
+    fs.writeFile(acFile, JSON.stringify(autocompletes, null, 4), err => {
+        if (err) {
+            console.error(err);
+        }
+    });
+});
+
+ipc.on('get-autocompletes', event => {
+    event.sender.send('autocompletes', autocompletes);
 });
